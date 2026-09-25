@@ -555,10 +555,22 @@ class GbxDevice(LK_Device):
             return False
 
     def SupportsAudioAsWe(self):
-        # Detection probing the audio pin as a write enable leaves consoles on
-        # the latest stock firmware with a flickering display that survives
-        # power cycles. ModRetro cartridges write on WR.
+        # Driving the audio pin leaves consoles on the latest stock firmware
+        # with a flickering display that survives power cycles; see SetPin.
+        # ModRetro cartridges write on WR.
         return False
+
+    # PIN_AUDIO's bit in LK_CMD_SET_PIN, after CART_POWER, CLK, WR, RD, CS,
+    # A0-A23 and CS2
+    AUDIO_PIN_INDEX = 30
+
+    def SetPin(self, pins, set_high):
+        # The stock console design only reads CART_AUDIN, but the gateware
+        # enables a pin's output whenever its level is set, so SetMode()'s
+        # SetPin(["PIN_AUDIO"], True) would drive it for the rest of the session.
+        pins = [p for p in pins if p not in ("PIN_AUDIO", self.AUDIO_PIN_INDEX)]
+        if pins:
+            return super().SetPin(pins, set_high)
 
     def Close(self, cartPowerOff=False):
         if self.DEVICE is None: return
