@@ -441,6 +441,58 @@ class GbxDevice(LK_Device):
         self.FW["bootloader_reset"] = True if self._read(1) == 1 else False
         return True
 
+    # How the profile files name ModRetro's own cartridges.
+    MODRETRO_PROFILE_PREFIX = "ModRetro Chromatic Cartridge"
+
+    # Profile fields this device can't act on, so two profiles that differ only
+    # in these write a cartridge identically: `SET_VOLTAGE_*()`, `PULLUPS_ON()`
+    # and `PULLUPS_OFF()` are all empty in `LK_Chromatic/LK_device.h`, as the
+    # cartridge slot runs from a fixed rail.
+    INERT_PROFILE_KEYS = ("voltage", "voltage_variants", "enable_pullup_wr")
+
+    # Not part of what a profile does to a cartridge: `names` because each name
+    # in a file becomes its own entry, and `flash_ids` because every candidate
+    # compared here has already matched the cartridge's ID.
+    IDENTITY_PROFILE_KEYS = ("names", "flash_ids")
+
+    def DetectFlash(self, limitVoltage=False):
+        ret = super().DetectFlash(limitVoltage=limitVoltage)
+        if ret is False:
+            return ret
+        (flash_types, flash_type_id, flash_id_s, cfi_s, cfi, detected_size) = ret
+        flash_type_id = self._modretro_alias_of(flash_types, flash_type_id)
+        return (flash_types, flash_type_id, flash_id_s, cfi_s, cfi, detected_size)
+
+    def _modretro_alias_of(self, flash_types, chosen):
+        """The ModRetro-named entry with the same configuration as `chosen`, if any.
+
+        Each name in a profile file becomes its own entry, and among identical
+        configurations detection picks whichever sorts first. For the S29JL032
+        ModRetro cartridge that's "GBFlash RTC with MX29LV320EB", and for the
+        IS29GL032 one it's "insideGadgets 4 MiB (S29GL032M)".
+
+        Only an entry whose configuration equals the chosen one's qualifies, so
+        this changes the name and nothing else. A ModRetro entry that merely
+        shares a flash ID isn't the same chip: `01 01 7E 7E` is claimed by both
+        of those files, which disagree about `start_addr` and buffered writing.
+        """
+        if self.MODE != "DMG" or chosen not in flash_types:
+            return chosen
+        profiles = self.GetSupportedCartridgesDMG()[1]
+        wanted = self._configuration(profiles[chosen])
+        for index in flash_types:
+            profile = profiles[index]
+            if profile["names"][0].startswith(self.MODRETRO_PROFILE_PREFIX) \
+                    and self._configuration(profile) == wanted:
+                return index
+        return chosen
+
+    @classmethod
+    def _configuration(cls, profile):
+        """What a profile says about writing a cartridge on this device."""
+        skip = cls.IDENTITY_PROFILE_KEYS + cls.INERT_PROFILE_KEYS
+        return {key: value for key, value in profile.items() if key not in skip}
+
     def ChangeBaudRate(self, _):
         dprint("Baudrate change is not supported.")
 
