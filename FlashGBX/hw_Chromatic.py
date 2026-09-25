@@ -555,7 +555,10 @@ class GbxDevice(LK_Device):
             return False
 
     def SupportsAudioAsWe(self):
-        return True
+        # Detection probing the audio pin as a write enable leaves consoles on
+        # the latest stock firmware with a flickering display that survives
+        # power cycles. ModRetro cartridges write on WR.
+        return False
 
     def Close(self, cartPowerOff=False):
         if self.DEVICE is None: return
