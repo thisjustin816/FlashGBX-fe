@@ -533,7 +533,12 @@ extern "C" void LK2MC_SET_PIN(const uint8_t pin, const uint8_t high) {
     case PIN_CS: a(SetPinsA::CS); break;
     case LK2MC_PIN_A15: b(SetPinsB::A15); break;
     case PIN_CS2: b(SetPinsB::RST); break; // CS2 is AGB name for RST pin
-    case PIN_AUDIO: b(SetPinsB::AUDIO); break;
+    case PIN_AUDIO:
+        b(SetPinsB::AUDIO);
+        // The gateware's SET_TRISTATE_PIN also sets the pin's output enable,
+        // so the next PIN_AUDIO_DIR_IN() must not be skipped as redundant
+        output_enable_state().audio = true;
+        break;
     default:
         LogError("LK2MC_SET_PIN called with invalid pin {}", pin);
         abort();
