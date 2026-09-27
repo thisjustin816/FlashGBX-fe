@@ -83,6 +83,21 @@ def LoadConfig(args):
 		else:
 			print(__("Warning: {config_zip_file} not found. This is required to load new flashcart profile configurations after updating.", config_zip_file=app_path + os.sep + os.path.join("res", "config.zip")))
 
+	# The block above only runs when the version changes, so a profile added to
+	# config.zip without a version change would otherwise never be extracted.
+	# Files already in the configuration folder are left as they are.
+	zip_path = app_path + os.sep + os.path.join("res", "config.zip")
+	if config_version == AppInfo.VERSION and os.path.exists(zip_path):
+		try:
+			with zipfile.ZipFile(zip_path) as zip:
+				missing = [zfile for zfile in zip.namelist() if not os.path.exists(config_path + os.sep + zfile)]
+				for zfile in missing:
+					zip.extract(zfile, config_path + os.sep)
+			if len(missing) > 0:
+				fc_files = glob.glob("{0:s}{1}fc_*.txt".format(glob.escape(config_path), os.sep))
+		except zipfile.BadZipFile:
+			print(__("Warning: config.zip is corrupted and could not be read."))
+
 	# Read flash cart types
 	for file in fc_files:
 		if os.path.exists(file):
