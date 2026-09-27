@@ -1,16 +1,30 @@
 Param(
   [Parameter(Mandatory)]
   [string]$Version,
-  [switch]$NoSign
+  [switch]$NoSign,
+  # Where the Gowin USB cable driver is, if not under C:\Gowin. It isn't ours
+  # to redistribute, so without it the installer leaves that component out.
+  [string]$GowinDriver
 )
 
 $ISCC = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 $GWU2XPattern = "C:\Gowin\Gowin_*\Programmer\driver\GowinUSBCableDriverV5_for_win7+.exe"
 $Inf2Cat = ""
 
-$GWU2X = (Resolve-Path $GWU2XPattern)
+if ($GowinDriver) {
+    $GWU2XPattern = $GowinDriver
+}
+$GWU2X = (Resolve-Path $GWU2XPattern -ErrorAction SilentlyContinue) | Select-Object -First 1
+# Components the installer leaves out because this build can't ship them
+$omitted = @()
 if (-not $GWU2X) {
-    $GWU2X = $GWU2XPattern
+    Write-Warning "No Gowin USB cable driver at $GWU2XPattern, so the installer won't include it"
+    $omitted += 'driver_gwu2x'
+}
+# Windows won't install a driver from an unsigned catalog
+if ($NoSign) {
+    Write-Warning "Unsigned build, so the installer won't include the Chromatic cartridge IO driver"
+    $omitted += 'driver_chromatic_cartio'
 }
 
 $WindowsKits = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows Kits\Installed Roots"
@@ -24,7 +38,11 @@ if (-not $Inf2Cat) {
     $Inf2Cat = "Inf2Cat.exe"
 }
 
-$missing = @('7z', $ISCC, $GWU2X, $Inf2Cat) | Where-Object { -not (Get-Command $_ -ErrorAction SilentlyContinue) }
+$required = @('7z', $ISCC)
+if (-not $NoSign) {
+    $required += $Inf2Cat
+}
+$missing = $required | Where-Object { -not (Get-Command $_ -ErrorAction SilentlyContinue) }
 if ($missing) {
     Write-Error "Missing required tools: $($missing -join ', ')"
     exit 1
@@ -100,7 +118,9 @@ Copy-Item cache\embedded-python\Lib\site-packages\FlashGBX\_LK_Chromatic.pdb art
 ##### build cat for Chromatic driver inf #####
 New-Item -ItemType Directory -Force -Path output\Drivers\chromatic_cartio
 Copy-Item release-scripts/chromatic_cartio.inf output\Drivers\chromatic_cartio
-& $Inf2Cat /driver:output\Drivers\chromatic_cartio\ /os:10_x64
+if (-not $NoSign) {
+    & $Inf2Cat /driver:output\Drivers\chromatic_cartio\ /os:10_x64
+}
 
 ##### 4. Sign FlashGBX binaries #####
 if ($NoSign) {
@@ -115,7 +135,9 @@ if ($NoSign) {
 
 ##### 5. Build zip #####
 7z a -tzip -mx=9 "artifacts\FlashGBX-$($Version.Replace('+','_'))_Windows-x64.zip" ".\output\*"
-7z a -tzip -mx=9 "artifacts\chromatic_cartio-driver-$($Version.Replace('+','_')).zip" ".\output\Drivers\chromatic_cartio\*"
+if (-not $NoSign) {
+    7z a -tzip -mx=9 "artifacts\chromatic_cartio-driver-$($Version.Replace('+','_')).zip" ".\output\Drivers\chromatic_cartio\*"
+}
 
 ##### 6. Fetch driver ######
 $ch341Dir = "artifacts\drivers\CH341"
@@ -152,7 +174,11 @@ $resolvedSetupDir = (Resolve-Path setup).Path
     -replace '<FILES_DIR>', "$resolvedOutputDir" `
     -replace '<CH341_DIR>', "$resolvedCh341Dir" `
     -replace '<GWU2X_PATH>', "$GWU2X" `
-    -replace '<OUTPUT_DIR>', "$resolvedSetupDir" | Set-Content "setup.iss"
+    -replace '<OUTPUT_DIR>', "$resolvedSetupDir" |
+    Where-Object {
+        $line = $_
+        -not ($omitted | Where-Object { $line -match "(Name: `"$_`"|Components: $_)" })
+    } | Set-Content "setup.iss"
 
 $filesToCopy = @("CHANGES.md", "README.md", "LICENSE", "Third Party Notices.md")
 foreach ($file in $filesToCopy) {
