@@ -1,0 +1,64 @@
+name: Build Windows installer
+
+# Runs fredemmott's release script unsigned. The installer it makes leaves out
+# two Chromatic drivers: the Gowin cable driver isn't ours to redistribute, and
+# Windows won't install the cartridge IO driver from an unsigned catalog. Both
+# stay installed once fredemmott's own installer or MRUpdater has put them in.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit to build
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Test-Path 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe')) {
+            choco install innosetup --yes --no-progress
+          }
+
+      - name: Work out the version
+        id: version
+        shell: pwsh
+        run: |
+          $match = Select-String -Path FlashGBX/app.py -Pattern 'VERSION_PEP440 = "(.+)"'
+          $commit = git rev-parse --short HEAD
+          "value=$($match.Matches[0].Groups[1].Value)-$commit" >> $env:GITHUB_OUTPUT
+
+      - name: Build
+        shell: pwsh
+        run: |
+          # Run it as it runs by hand, where an error doesn't stop it
+          $ErrorActionPreference = 'Continue'
+          ./release-scripts/win32.ps1 -Version '${{ steps.version.outputs.value }}' -NoSign
+          if (-not (Test-Path 'setup/FlashGBX-${{ steps.version.outputs.value }}_Windows-x64_Setup.exe')) {
+            Write-Error 'The installer was not built'
+            exit 1
+          }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FlashGBX-${{ steps.version.outputs.value }}-Windows
+          path: |
+            artifacts/*.zip
+            artifacts/*.pdb
+          if-no-files-found: error

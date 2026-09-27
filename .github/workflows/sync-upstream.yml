@@ -1,10 +1,10 @@
 name: Sync with fredemmott
 
-# Mirrors fredemmott's fe-5.1 into this fork's fe-5.1, then merges it into
-# main. A conflict in res/config.zip is expected whenever upstream
-# regenerates it, so that one is resolved by taking upstream's zip and
-# appending this fork's profiles again. Any other conflict fails the run
-# for a person to resolve.
+# Merges fredemmott's fe-5.1 into main, then builds the result, as a push
+# made with this workflow's token doesn't start the build by itself. A
+# conflict in res/config.zip is expected whenever upstream regenerates it,
+# so that one is resolved by taking upstream's zip and appending this fork's
+# profiles again. Any other conflict fails the run for a person to resolve.
 
 on:
   schedule:
@@ -22,6 +22,8 @@ env:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    outputs:
+      commit: ${{ steps.merge.outputs.commit }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,10 +37,8 @@ jobs:
           git remote add upstream https://github.com/fredemmott/FlashGBX.git
           git fetch --no-tags upstream fe-5.1
 
-      - name: Mirror it to this fork's fe-5.1
-        run: git push origin refs/remotes/upstream/fe-5.1:refs/heads/fe-5.1
-
       - name: Merge it into main
+        id: merge
         run: |
           if git merge-base --is-ancestor upstream/fe-5.1 HEAD; then
             echo 'main already contains fredemmott/fe-5.1'
@@ -66,3 +66,11 @@ jobs:
             git commit --no-edit
           fi
           git push origin HEAD:main
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: sync
+    if: needs.sync.outputs.commit != ''
+    uses: ./.github/workflows/build-windows.yml
+    with:
+      ref: ${{ needs.sync.outputs.commit }}
