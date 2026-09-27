@@ -1,0 +1,68 @@
+name: Sync with fredemmott
+
+# Mirrors fredemmott's fe-5.1 into this fork's fe-5.1, then merges it into
+# main. A conflict in res/config.zip is expected whenever upstream
+# regenerates it, so that one is resolved by taking upstream's zip and
+# appending this fork's profiles again. Any other conflict fails the run
+# for a person to resolve.
+
+on:
+  schedule:
+    - cron: '17 9 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FORK_PROFILES: >-
+    fc_DMG_ChisFlash-MBC5-MAX_28EW256A.txt
+    fc_DMG_ChisFlash-MBC5-MAX_S29GL256N.txt
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Fetch fredemmott's fe-5.1
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git remote add upstream https://github.com/fredemmott/FlashGBX.git
+          git fetch --no-tags upstream fe-5.1
+
+      - name: Mirror it to this fork's fe-5.1
+        run: git push origin refs/remotes/upstream/fe-5.1:refs/heads/fe-5.1
+
+      - name: Merge it into main
+        run: |
+          if git merge-base --is-ancestor upstream/fe-5.1 HEAD; then
+            echo 'main already contains fredemmott/fe-5.1'
+            exit 0
+          fi
+          if ! git merge --no-edit upstream/fe-5.1; then
+            conflicted="$(git diff --name-only --diff-filter=U)"
+            if [ "$conflicted" != 'FlashGBX/res/config.zip' ]; then
+              echo "::error::Merge conflicts need resolving by hand: $conflicted"
+              git merge --abort
+              exit 1
+            fi
+            git checkout --theirs FlashGBX/res/config.zip
+            python3 - <<'PY'
+          import os, zipfile
+          path = "FlashGBX/res/config.zip"
+          with zipfile.ZipFile(path) as z:
+              present = set(z.namelist())
+          with zipfile.ZipFile(path, "a", compression=zipfile.ZIP_DEFLATED) as z:
+              for name in os.environ["FORK_PROFILES"].split():
+                  if name not in present:
+                      z.write(os.path.join("FlashGBX/config", name), name)
+          PY
+            git add FlashGBX/res/config.zip
+            git commit --no-edit
+          fi
+          git push origin HEAD:main
