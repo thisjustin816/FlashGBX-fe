@@ -480,7 +480,7 @@ extern "C" void LK2MC_DELAY_MICROS(const uint32_t duration) {
 
     auto& cq = CommandQueue::get();
     for (int i = 0; i < completeDelays; ++i) {
-        cq.push(Command::Delay, MaxHundredsOfNSDelay);
+        cq.push(Command::Delay, HundredsOfNSToDelayArg(MaxHundredsOfNSDelay));
     }
     if (remainder) {
         cq.push(Command::Delay, HundredsOfNSToDelayArg(remainder));
