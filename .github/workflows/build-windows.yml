@@ -1,9 +1,8 @@
 name: Build Windows installer
 
-# Runs fredemmott's release script unsigned. The installer it makes leaves out
-# two Chromatic drivers: the Gowin cable driver isn't ours to redistribute, and
-# Windows won't install the cartridge IO driver from an unsigned catalog. Both
-# stay installed once fredemmott's own installer or MRUpdater has put them in.
+# Runs fredemmott's release script unsigned, with the two Chromatic drivers his
+# installer ships: the Gowin cable driver out of MRUpdater, and the signed
+# cartridge IO driver catalog out of his release for the same version.
 
 on:
   push:
@@ -41,15 +40,23 @@ jobs:
         shell: pwsh
         run: |
           $match = Select-String -Path FlashGBX/app.py -Pattern 'VERSION_PEP440 = "(.+)"'
+          $release = $match.Matches[0].Groups[1].Value
           $commit = git rev-parse --short HEAD
-          "value=$($match.Matches[0].Groups[1].Value)-$commit" >> $env:GITHUB_OUTPUT
+          "release=$release" >> $env:GITHUB_OUTPUT
+          "value=$release-$commit" >> $env:GITHUB_OUTPUT
+
+      - name: Fetch the Chromatic drivers
+        shell: pwsh
+        run: ./release-scripts/fetch-drivers.ps1 -Version '${{ steps.version.outputs.release }}' -Destination drivers
 
       - name: Build
         shell: pwsh
         run: |
           # Run it as it runs by hand, where an error doesn't stop it
           $ErrorActionPreference = 'Continue'
-          ./release-scripts/win32.ps1 -Version '${{ steps.version.outputs.value }}' -NoSign
+          ./release-scripts/win32.ps1 -Version '${{ steps.version.outputs.value }}' -NoSign `
+            -GowinDriver 'drivers/GowinUSBCableDriverV5_for_win7+.exe' `
+            -CartIOCatalog drivers/chromatic_cartio.cat
           if (-not (Test-Path 'setup/FlashGBX-${{ steps.version.outputs.value }}_Windows-x64_Setup.exe')) {
             Write-Error 'The installer was not built'
             exit 1

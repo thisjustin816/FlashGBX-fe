@@ -2,9 +2,12 @@ Param(
   [Parameter(Mandatory)]
   [string]$Version,
   [switch]$NoSign,
-  # Where the Gowin USB cable driver is, if not under C:\Gowin. It isn't ours
-  # to redistribute, so without it the installer leaves that component out.
-  [string]$GowinDriver
+  # Where the Gowin USB cable driver is, if not under C:\Gowin. Without it the
+  # installer leaves that component out.
+  [string]$GowinDriver,
+  # A signed chromatic_cartio.cat to use instead of making one, so an unsigned
+  # build can still install the cartridge IO driver. See fetch-drivers.ps1.
+  [string]$CartIOCatalog
 )
 
 $ISCC = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
@@ -22,7 +25,7 @@ if (-not $GWU2X) {
     $omitted += 'driver_gwu2x'
 }
 # Windows won't install a driver from an unsigned catalog
-if ($NoSign) {
+if ($NoSign -and -not $CartIOCatalog) {
     Write-Warning "Unsigned build, so the installer won't include the Chromatic cartridge IO driver"
     $omitted += 'driver_chromatic_cartio'
 }
@@ -39,7 +42,7 @@ if (-not $Inf2Cat) {
 }
 
 $required = @('7z', $ISCC)
-if (-not $NoSign) {
+if (-not $NoSign -and -not $CartIOCatalog) {
     $required += $Inf2Cat
 }
 $missing = $required | Where-Object { -not (Get-Command $_ -ErrorAction SilentlyContinue) }
@@ -118,7 +121,9 @@ Copy-Item cache\embedded-python\Lib\site-packages\FlashGBX\_LK_Chromatic.pdb art
 ##### build cat for Chromatic driver inf #####
 New-Item -ItemType Directory -Force -Path output\Drivers\chromatic_cartio
 Copy-Item release-scripts/chromatic_cartio.inf output\Drivers\chromatic_cartio
-if (-not $NoSign) {
+if ($CartIOCatalog) {
+    Copy-Item $CartIOCatalog output\Drivers\chromatic_cartio
+} elseif (-not $NoSign) {
     & $Inf2Cat /driver:output\Drivers\chromatic_cartio\ /os:10_x64
 }
 
@@ -135,7 +140,7 @@ if ($NoSign) {
 
 ##### 5. Build zip #####
 7z a -tzip -mx=9 "artifacts\FlashGBX-$($Version.Replace('+','_'))_Windows-x64.zip" ".\output\*"
-if (-not $NoSign) {
+if ($omitted -notcontains 'driver_chromatic_cartio') {
     7z a -tzip -mx=9 "artifacts\chromatic_cartio-driver-$($Version.Replace('+','_')).zip" ".\output\Drivers\chromatic_cartio\*"
 }
 
