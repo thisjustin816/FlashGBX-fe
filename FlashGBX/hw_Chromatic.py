@@ -456,13 +456,45 @@ class GbxDevice(LK_Device):
     # compared here has already matched the cartridge's ID.
     IDENTITY_PROFILE_KEYS = ("names", "flash_ids")
 
+    # Where a profile says the sector boundaries are. `Flashcart.GetSectorMap()`
+    # lets a fixed `sector_size` win over CFI.
+    SECTOR_MAP_KEYS = ("sector_size", "sector_size_from_cfi")
+
     def DetectFlash(self, limitVoltage=False):
         ret = super().DetectFlash(limitVoltage=limitVoltage)
         if ret is False:
             return ret
         (flash_types, flash_type_id, flash_id_s, cfi_s, cfi, detected_size) = ret
+        flash_type_id = self._chip_derived_map_of(flash_types, flash_type_id, cfi)
         flash_type_id = self._modretro_alias_of(flash_types, flash_type_id)
         return (flash_types, flash_type_id, flash_id_s, cfi_s, cfi, detected_size)
+
+    def _chip_derived_map_of(self, flash_types, chosen, cfi):
+        """A matching entry that reads its sector map off the chip, if there is one.
+
+        A fixed `sector_size` hands its layout to every board sharing the flash
+        ID. The top-boot and bottom-boot S29JL032J answer the same ID, so a
+        fixed bottom-boot map is wrong for the top-boot one, while a map read
+        off the chip can't be wrong about that chip.
+
+        Only an entry that is the same profile apart from where its map comes
+        from qualifies, so this changes the layout and nothing about how a write
+        walks the cartridge. With the profiles shipped today, detection already
+        picks a CFI map for the top-boot board, so this only acts if a profile
+        added later changes which entry sorts first.
+        """
+        if self.MODE != "DMG" or chosen not in flash_types or not isinstance(cfi, dict):
+            return chosen
+        profiles = self.GetSupportedCartridgesDMG()[1]
+        if profiles[chosen].get("sector_size_from_cfi"):
+            return chosen
+        wanted = self._configuration(profiles[chosen], self.SECTOR_MAP_KEYS)
+        for index in flash_types:
+            profile = profiles[index]
+            if profile.get("sector_size_from_cfi") \
+                    and self._configuration(profile, self.SECTOR_MAP_KEYS) == wanted:
+                return index
+        return chosen
 
     def _modretro_alias_of(self, flash_types, chosen):
         """The ModRetro-named entry with the same configuration as `chosen`, if any.
@@ -489,9 +521,9 @@ class GbxDevice(LK_Device):
         return chosen
 
     @classmethod
-    def _configuration(cls, profile):
+    def _configuration(cls, profile, also_skip=()):
         """What a profile says about writing a cartridge on this device."""
-        skip = cls.IDENTITY_PROFILE_KEYS + cls.INERT_PROFILE_KEYS
+        skip = cls.IDENTITY_PROFILE_KEYS + cls.INERT_PROFILE_KEYS + tuple(also_skip)
         return {key: value for key, value in profile.items() if key not in skip}
 
     def ChangeBaudRate(self, _):
