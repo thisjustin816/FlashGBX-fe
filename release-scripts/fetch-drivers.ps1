@@ -17,7 +17,9 @@
       used if the .inf beside it matches release-scripts/chromatic_cartio.inf
       byte for byte, as the signature covers the .inf.
 
-    Both have their Authenticode signatures checked.
+    The driver installer isn't Authenticode-signed, so it's checked against
+    the SHA-256 of the copy MRUpdater carried when this was written. The
+    catalog's signature is checked.
 
 .PARAMETER Version
     The version in FlashGBX/app.py, such as 5.1+fredemmott.3. fredemmott's
@@ -50,6 +52,7 @@ $ErrorActionPreference = 'Stop'
 
 $MRUpdaterUrl = 'https://s3.us-east-1.amazonaws.com/updates.modretro.com/apps/MRUpdater.exe'
 $GowinDriverName = 'GowinUSBCableDriverV5_for_win7+.exe'
+$GowinDriverSha256 = 'B026197755328AA043FC93B84A6F2AFD57F6AFBE9C8AE4B9106AD18F8AA085B9'
 $ReleasesApi = 'https://api.github.com/repos/fredemmott/FlashGBX/releases/tags/'
 
 function Assert-Signed {
@@ -99,7 +102,12 @@ try {
     if (-not $driver) {
         throw "MRUpdater no longer contains $GowinDriverName."
     }
-    Assert-Signed -Path $driver.FullName
+    $hash = (Get-FileHash -LiteralPath $driver.FullName -Algorithm SHA256).Hash
+    if ($hash -ne $GowinDriverSha256) {
+        throw ("MRUpdater now carries a different $GowinDriverName (SHA-256 $hash). " +
+            'Check the new one, then update $GowinDriverSha256 in this script.')
+    }
+    Write-Host "  SHA-256 $hash, as expected"
     Copy-Item -LiteralPath $driver.FullName -Destination $Destination -Force
 
     Write-Host "Cartridge IO driver catalog, from fredemmott's v$Version"
