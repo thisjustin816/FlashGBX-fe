@@ -1,14 +1,13 @@
 name: Sync with fredemmott
 
-# Merges fredemmott's fe-5.1 into main, then builds the result, as a push
-# made with this workflow's token doesn't start the build by itself. A
+# Run by hand when fredemmott publishes a release. Merges his fe-5.1 into
+# main, then builds the result, as a push made with this workflow's token
+# doesn't start the build by itself. A
 # conflict in res/config.zip is expected whenever upstream regenerates it,
 # so that one is resolved by taking upstream's zip and appending this fork's
 # profiles again. Any other conflict fails the run for a person to resolve.
 
 on:
-  schedule:
-    - cron: '17 9 * * *'
   workflow_dispatch:
 
 permissions:
@@ -32,8 +31,8 @@ jobs:
 
       - name: Fetch fredemmott's fe-5.1
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config user.name 'Justin Beeson'
+          git config user.email '41129295+thisjustin816@users.noreply.github.com'
           git remote add upstream https://github.com/fredemmott/FlashGBX.git
           git fetch --no-tags upstream fe-5.1
 
