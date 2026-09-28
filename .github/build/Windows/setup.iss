@@ -48,7 +48,6 @@ Name: "program"; Description: "FlashGBX application"; Types: full custom; Flags:
 Name: "driver_ch341"; Description: "CH340/CH341 driver v3.9.2024.09 for GBxCart RW and GBFlash (install/re-install)"; Types: full
 Name: "driver_gwu2x"; Description: "GWU2X FPGA driver for ModRetro Chromatic (install/reinstall)"; Types: full
 Name: "driver_chromatic_cartio"; Description: "Cartridge IO driver for ModRetro Chromatic (install/reinstall)"; Types: full
-Name: "mrupdater"; Description: "MRUpdater, ModRetro's firmware updater for the Chromatic (downloaded from ModRetro)"; Types: full
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
@@ -57,13 +56,11 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "{#MyFilesDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: program
 Source: "{#MyCH341Dir}\*.*"; DestDir: "{app}\Drivers\CH341"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: driver_ch341
 Source: "{#MyGWU2XPath}"; DestDir: "{app}\Drivers";Flags: ignoreversion recursesubdirs createallsubdirs; Components: driver_gwu2x
-Source: "{tmp}\MRUpdater.exe"; DestDir: "{app}\MRUpdater"; Flags: external ignoreversion skipifsourcedoesntexist; Components: mrupdater
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}";
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
-Name: "{autoprograms}\MRUpdater"; Filename: "{app}\MRUpdater\MRUpdater.exe"; Components: mrupdater; Check: MRUpdaterDownloaded
 
 [Run]
 Filename: "{app}\Drivers\CH341\CH341SER.EXE"; Description: "Install CH340/CH341 driver"; Flags: waituntilterminated; Components: driver_ch341
@@ -77,40 +74,6 @@ Type: filesandordirs; Name: "{app}\Python_3.10.11";
 Type: filesandordirs; Name: "{app}\*.pyd";
 
 [Code]
-var
-  MRUpdaterPage: TDownloadWizardPage;
-
-procedure InitializeWizard;
-begin
-  MRUpdaterPage := CreateDownloadPage(SetupMessage(msgWizardPreparing), SetupMessage(msgPreparingDesc), nil);
-end;
-
-// MRUpdater is ModRetro's, so it's fetched from them rather than shipped here
-function NextButtonClick(CurPageID: Integer): Boolean;
-begin
-  Result := True;
-  if (CurPageID = wpReady) and WizardIsComponentSelected('mrupdater') then
-  begin
-    MRUpdaterPage.Clear;
-    MRUpdaterPage.Add('https://s3.us-east-1.amazonaws.com/updates.modretro.com/apps/MRUpdater.exe', 'MRUpdater.exe', '');
-    MRUpdaterPage.Show;
-    try
-      try
-        MRUpdaterPage.Download;
-      except
-        SuppressibleMsgBox('MRUpdater could not be downloaded, so it will not be installed: ' + GetExceptionMessage, mbError, MB_OK, IDOK);
-      end;
-    finally
-      MRUpdaterPage.Hide;
-    end;
-  end;
-end;
-
-function MRUpdaterDownloaded: Boolean;
-begin
-  Result := FileExists(ExpandConstant('{tmp}\MRUpdater.exe'));
-end;
-
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usPostUninstall then
