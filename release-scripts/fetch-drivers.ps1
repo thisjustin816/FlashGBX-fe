@@ -23,7 +23,7 @@
 
 .PARAMETER Version
     fredemmott's version that this build is based on, such as 5.1+fredemmott.3:
-    the one in FlashGBX/app.py without this fork's own last segment. His release
+    the one in FlashGBX/app.py with his label in place of this fork's. His release
     for it is tagged with a leading v.
 
 .PARAMETER Destination

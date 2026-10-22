@@ -6,9 +6,9 @@ name: Sync with fredemmott
 # here. One is in res/config.zip whenever upstream regenerates it, resolved by
 # taking upstream's zip and appending this fork's profiles again. The other is
 # in app.py whenever upstream changes its version, resolved by taking upstream's
-# file and adding VERSION_SUFFIX to the version again, which assumes the suffix
-# is this fork's only change to that file. Any other conflict fails the run for
-# a person to resolve.
+# file and putting VERSION_LABEL in place of fredemmott in the version again,
+# which assumes the label is this fork's only change to that file. Any other
+# conflict fails the run for a person to resolve.
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ env:
   FORK_PROFILES: >-
     fc_DMG_ChisFlash-MBC5-MAX_28EW256A.txt
     fc_DMG_ChisFlash-MBC5-MAX_S29GL256N.txt
-  VERSION_SUFFIX: .jb
+  VERSION_LABEL: jb
 
 jobs:
   sync:
@@ -71,9 +71,9 @@ jobs:
             fi
             if echo "$conflicted" | grep -qx 'FlashGBX/app.py'; then
               git checkout --theirs FlashGBX/app.py
-              sed -i -E "s/^([[:space:]]*VERSION_PEP440 = \"[^\"]+)\"/\1${VERSION_SUFFIX}\"/" FlashGBX/app.py
-              if ! grep -qF "${VERSION_SUFFIX}\"" FlashGBX/app.py; then
-                echo "::error::Couldn't add $VERSION_SUFFIX to the version in FlashGBX/app.py"
+              sed -i -E "s/^([[:space:]]*VERSION_PEP440 = \"[^+\"]+)\+fredemmott\./\1+${VERSION_LABEL}./" FlashGBX/app.py
+              if ! grep -qF "+${VERSION_LABEL}." FlashGBX/app.py; then
+                echo "::error::Couldn't put $VERSION_LABEL in the version in FlashGBX/app.py"
                 git merge --abort
                 exit 1
               fi

@@ -6,7 +6,7 @@ import platform, importlib, re, sys
 
 class AppInfo:
 	NAME = "FlashGBX"
-	VERSION_PEP440 = "5.1+fredemmott.4.jb"
+	VERSION_PEP440 = "5.1+jb.4"
 	VERSION = "v{:s}".format(VERSION_PEP440)
 	VERSION_TIMESTAMP = 1788010533
 
