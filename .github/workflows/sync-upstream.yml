@@ -20,6 +20,7 @@ env:
   FORK_PROFILES: >-
     fc_DMG_ChisFlash-MBC5-MAX_28EW256A.txt
     fc_DMG_ChisFlash-MBC5-MAX_S29GL256N.txt
+    fc_DMG_S29JL032J_TOP.txt
   VERSION_LABEL: jb
 
 jobs:
