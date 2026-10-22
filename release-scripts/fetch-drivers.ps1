@@ -22,8 +22,9 @@
     catalog's signature is checked.
 
 .PARAMETER Version
-    The version in FlashGBX/app.py, such as 5.1+fredemmott.3. fredemmott's
-    release for it is tagged with a leading v.
+    fredemmott's version that this build is based on, such as 5.1+fredemmott.3:
+    the one in FlashGBX/app.py without this fork's own last segment. His release
+    for it is tagged with a leading v.
 
 .PARAMETER Destination
     Where to put the two files. Not under cache, which win32.ps1 clears.

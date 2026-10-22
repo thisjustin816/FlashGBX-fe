@@ -44,15 +44,19 @@ jobs:
         run: |
           $match = Select-String -Path FlashGBX/app.py -Pattern 'VERSION_PEP440 = "(.+)"'
           $release = $match.Matches[0].Groups[1].Value
+          # This fork's version is fredemmott's with a segment of its own after it,
+          # and the drivers come from his release of the version underneath.
+          $upstream = $release -replace '^(.+\+fredemmott\.\d+)\..+$', '$1'
           $commit = git rev-parse --short HEAD
           "release=$release" >> $env:GITHUB_OUTPUT
+          "upstream=$upstream" >> $env:GITHUB_OUTPUT
           "value=$release-$commit" >> $env:GITHUB_OUTPUT
 
       - name: Fetch the Chromatic drivers
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: ./release-scripts/fetch-drivers.ps1 -Version '${{ steps.version.outputs.release }}' -Destination drivers
+        run: ./release-scripts/fetch-drivers.ps1 -Version '${{ steps.version.outputs.upstream }}' -Destination drivers
 
       - name: Build
         shell: pwsh

@@ -2,10 +2,13 @@ name: Sync with fredemmott
 
 # Run by hand when fredemmott publishes a release. Merges his fe-5.1 into
 # main, then builds the result, as a push made with this workflow's token
-# doesn't start the build by itself. A
-# conflict in res/config.zip is expected whenever upstream regenerates it,
-# so that one is resolved by taking upstream's zip and appending this fork's
-# profiles again. Any other conflict fails the run for a person to resolve.
+# doesn't start the build by itself. Two conflicts are expected and resolved
+# here. One is in res/config.zip whenever upstream regenerates it, resolved by
+# taking upstream's zip and appending this fork's profiles again. The other is
+# in app.py whenever upstream changes its version, resolved by taking upstream's
+# file and adding VERSION_SUFFIX to the version again, which assumes the suffix
+# is this fork's only change to that file. Any other conflict fails the run for
+# a person to resolve.
 
 on:
   workflow_dispatch:
@@ -17,6 +20,7 @@ env:
   FORK_PROFILES: >-
     fc_DMG_ChisFlash-MBC5-MAX_28EW256A.txt
     fc_DMG_ChisFlash-MBC5-MAX_S29GL256N.txt
+  VERSION_SUFFIX: .jb
 
 jobs:
   sync:
@@ -45,13 +49,15 @@ jobs:
           fi
           if ! git merge --no-edit upstream/fe-5.1; then
             conflicted="$(git diff --name-only --diff-filter=U)"
-            if [ "$conflicted" != 'FlashGBX/res/config.zip' ]; then
-              echo "::error::Merge conflicts need resolving by hand: $conflicted"
+            unexpected="$(echo "$conflicted" | grep -vx -e 'FlashGBX/res/config.zip' -e 'FlashGBX/app.py' || true)"
+            if [ -n "$unexpected" ]; then
+              echo "::error::Merge conflicts need resolving by hand: $unexpected"
               git merge --abort
               exit 1
             fi
-            git checkout --theirs FlashGBX/res/config.zip
-            python3 - <<'PY'
+            if echo "$conflicted" | grep -qx 'FlashGBX/res/config.zip'; then
+              git checkout --theirs FlashGBX/res/config.zip
+              python3 - <<'PY'
           import os, zipfile
           path = "FlashGBX/res/config.zip"
           with zipfile.ZipFile(path) as z:
@@ -61,7 +67,18 @@ jobs:
                   if name not in present:
                       z.write(os.path.join("FlashGBX/config", name), name)
           PY
-            git add FlashGBX/res/config.zip
+              git add FlashGBX/res/config.zip
+            fi
+            if echo "$conflicted" | grep -qx 'FlashGBX/app.py'; then
+              git checkout --theirs FlashGBX/app.py
+              sed -i -E "s/^([[:space:]]*VERSION_PEP440 = \"[^\"]+)\"/\1${VERSION_SUFFIX}\"/" FlashGBX/app.py
+              if ! grep -qF "${VERSION_SUFFIX}\"" FlashGBX/app.py; then
+                echo "::error::Couldn't add $VERSION_SUFFIX to the version in FlashGBX/app.py"
+                git merge --abort
+                exit 1
+              fi
+              git add FlashGBX/app.py
+            fi
             git commit --no-edit
           fi
           git push origin HEAD:main
