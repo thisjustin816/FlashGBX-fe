@@ -6,9 +6,12 @@ name: Sync with fredemmott
 # here. One is in res/config.zip whenever upstream regenerates it, resolved by
 # taking upstream's zip and appending this fork's profiles again. The other is
 # in app.py whenever upstream changes its version, resolved by taking upstream's
-# file and putting VERSION_LABEL in place of fredemmott in the version again,
-# which assumes the label is this fork's only change to that file. Any other
-# conflict fails the run for a person to resolve.
+# file, which assumes the version is this fork's only change to that file. Any
+# other conflict fails the run for a person to resolve.
+#
+# This fork counts its own releases: every merge sets the version to upstream's
+# base version, VERSION_LABEL, and one more than this fork's last count, so
+# 5.1+jb.5 merging upstream's 5.1+fredemmott.5 becomes 5.1+jb.6.
 
 on:
   workflow_dispatch:
@@ -48,7 +51,12 @@ jobs:
             echo 'main already contains fredemmott/fe-5.1'
             exit 0
           fi
-          if ! git merge --no-edit upstream/fe-5.1; then
+          count="$(sed -nE "s/^[[:space:]]*VERSION_PEP440 = \"[^+\"]+\+${VERSION_LABEL}\.([0-9]+)\".*/\1/p" FlashGBX/app.py)"
+          if [ -z "$count" ]; then
+            echo "::error::FlashGBX/app.py's version doesn't end in +${VERSION_LABEL}.N"
+            exit 1
+          fi
+          if ! git merge --no-ff --no-commit upstream/fe-5.1; then
             conflicted="$(git diff --name-only --diff-filter=U)"
             unexpected="$(echo "$conflicted" | grep -vx -e 'FlashGBX/res/config.zip' -e 'FlashGBX/app.py' || true)"
             if [ -n "$unexpected" ]; then
@@ -72,16 +80,17 @@ jobs:
             fi
             if echo "$conflicted" | grep -qx 'FlashGBX/app.py'; then
               git checkout --theirs FlashGBX/app.py
-              sed -i -E "s/^([[:space:]]*VERSION_PEP440 = \"[^+\"]+)\+fredemmott\./\1+${VERSION_LABEL}./" FlashGBX/app.py
-              if ! grep -qF "+${VERSION_LABEL}." FlashGBX/app.py; then
-                echo "::error::Couldn't put $VERSION_LABEL in the version in FlashGBX/app.py"
-                git merge --abort
-                exit 1
-              fi
-              git add FlashGBX/app.py
             fi
-            git commit --no-edit
           fi
+          version="$(sed -nE 's/^[[:space:]]*VERSION_PEP440 = "([^+"]+).*/\1/p' FlashGBX/app.py)+${VERSION_LABEL}.$((count + 1))"
+          sed -i -E "s/^([[:space:]]*VERSION_PEP440 = \")[^\"]+\"/\1${version}\"/" FlashGBX/app.py
+          if ! grep -qF "VERSION_PEP440 = \"${version}\"" FlashGBX/app.py; then
+            echo "::error::Couldn't set the version in FlashGBX/app.py to $version"
+            git merge --abort
+            exit 1
+          fi
+          git add FlashGBX/app.py
+          git commit --no-edit
           git push origin HEAD:main
           echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 

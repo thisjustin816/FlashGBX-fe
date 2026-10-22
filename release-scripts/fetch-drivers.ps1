@@ -22,9 +22,8 @@
     catalog's signature is checked.
 
 .PARAMETER Version
-    fredemmott's version that this build is based on, such as 5.1+fredemmott.3:
-    the one in FlashGBX/app.py with his label in place of this fork's. His release
-    for it is tagged with a leading v.
+    The fredemmott release to take the catalog from, such as 5.1+fredemmott.4.
+    His release is tagged with a leading v.
 
 .PARAMETER Destination
     Where to put the two files. Not under cache, which win32.ps1 clears.
@@ -33,8 +32,8 @@
     A ChromaticFirmwareUpdater.exe already on disk. Downloaded when not given.
 
 .EXAMPLE
-    ./release-scripts/fetch-drivers.ps1 -Version 5.1+fredemmott.3 -Destination drivers
-    ./release-scripts/win32.ps1 -Version 5.1+fredemmott.3 -NoSign `
+    ./release-scripts/fetch-drivers.ps1 -Version 5.1+fredemmott.4 -Destination drivers
+    ./release-scripts/win32.ps1 -Version 5.1+jb.5 -NoSign `
         -GowinDriver 'drivers/GowinUSBCableDriverV5_for_win7+.exe' `
         -CartIOCatalog drivers/chromatic_cartio.cat
 #>

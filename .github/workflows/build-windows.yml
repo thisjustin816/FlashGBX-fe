@@ -2,8 +2,10 @@ name: Build Windows installer
 
 # Runs fredemmott's release script unsigned, with the two Chromatic drivers his
 # installer ships: the Gowin cable driver out of ChromaticFirmwareUpdater, and
-# the signed cartridge IO driver catalog out of his release for the same
-# version.
+# the signed cartridge IO driver catalog out of his release CARTIO_CATALOG_FROM.
+# That driver is configuration only and isn't expected to change, so one release
+# serves every build here. fetch-drivers.ps1 fails the build if the .inf it covers
+# stops matching this repository's.
 
 on:
   push:
@@ -18,6 +20,9 @@ on:
 
 permissions:
   contents: read
+
+env:
+  CARTIO_CATALOG_FROM: 5.1+fredemmott.4
 
 jobs:
   build:
@@ -44,19 +49,15 @@ jobs:
         run: |
           $match = Select-String -Path FlashGBX/app.py -Pattern 'VERSION_PEP440 = "(.+)"'
           $release = $match.Matches[0].Groups[1].Value
-          # This fork's version is fredemmott's with its own label in place of his,
-          # and the drivers come from his release of the same number.
-          $upstream = $release -replace '^([^+]+)\+[^.]+\.', '$1+fredemmott.'
           $commit = git rev-parse --short HEAD
           "release=$release" >> $env:GITHUB_OUTPUT
-          "upstream=$upstream" >> $env:GITHUB_OUTPUT
           "value=$release-$commit" >> $env:GITHUB_OUTPUT
 
       - name: Fetch the Chromatic drivers
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: ./release-scripts/fetch-drivers.ps1 -Version '${{ steps.version.outputs.upstream }}' -Destination drivers
+        run: ./release-scripts/fetch-drivers.ps1 -Version '${{ env.CARTIO_CATALOG_FROM }}' -Destination drivers
 
       - name: Build
         shell: pwsh
