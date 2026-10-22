@@ -507,10 +507,11 @@ class GbxDevice(LK_Device):
     # cartridge slot runs from a fixed rail.
     INERT_PROFILE_KEYS = ("voltage", "voltage_variants", "enable_pullup_wr")
 
-    # Not part of what a profile does to a cartridge: `names` because each name
-    # in a file becomes its own entry, and `flash_ids` because every candidate
-    # compared here has already matched the cartridge's ID.
-    IDENTITY_PROFILE_KEYS = ("names", "flash_ids")
+    # Not part of what a profile does to a cartridge: `names` and
+    # `_profile_names` because each name in a file becomes its own entry, and
+    # `flash_ids` because every candidate compared here has already matched the
+    # cartridge's ID.
+    IDENTITY_PROFILE_KEYS = ("names", "_profile_names", "flash_ids")
 
     # Where a profile says the sector boundaries are. `Flashcart.GetSectorMap()`
     # lets a fixed `sector_size` win over CFI.
@@ -564,10 +565,15 @@ class GbxDevice(LK_Device):
         this changes the name and nothing else. A ModRetro entry that merely
         shares a flash ID isn't the same chip: `01 01 7E 7E` is claimed by both
         of those files, which disagree about `start_addr` and buffered writing.
+        A chosen entry that already has a ModRetro name is kept, as detection
+        picks the name its file lists beside the flash ID that matched, and the
+        39VF1681 and 39VF1682 entries share one configuration.
         """
         if self.MODE != "DMG" or chosen not in flash_types:
             return chosen
         profiles = self.GetSupportedCartridgesDMG()[1]
+        if profiles[chosen]["names"][0].startswith(self.MODRETRO_PROFILE_PREFIX):
+            return chosen
         wanted = self._configuration(profiles[chosen])
         for index in flash_types:
             profile = profiles[index]
