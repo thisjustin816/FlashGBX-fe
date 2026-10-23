@@ -1,4 +1,3 @@
-#include <thread>
 extern "C" {
 #include "MC_transport.h"
 
@@ -94,7 +93,6 @@ struct [[nodiscard]] LibUSBTransfer {
 
     ~LibUSBTransfer() {
         if (_transfer) {
-            std::ignore = wait();
             libusb_free_transfer(_transfer);
         }
     }
@@ -299,24 +297,7 @@ struct LibUSBDevice {
             abort();
         }
 
-        struct device_guard_t {
-            libusb_device_handle* p { nullptr };
-            [[nodiscard]]
-            auto detach() {
-                return std::exchange(p, nullptr);
-            }
-
-            ~device_guard_t() {
-                if (p) {
-                    libusb_close(p);
-                }
-            }
-
-            operator libusb_device_handle*() const noexcept {
-                return p;
-            }
-        } device { libusb_open_device_with_vid_pid(ctx, vendorID, productID) };
-
+        const auto device = libusb_open_device_with_vid_pid(ctx, vendorID, productID);
         if (!device) {
             LogError("libusb_open_device_with_vid_pid() did not return a device");
             return std::unexpected { static_cast<int>(papi_open_status::DeviceNotFound) };
@@ -349,14 +330,7 @@ struct LibUSBDevice {
                     continue;
                 }
                 unsigned char buffer[255];
-                int count = 0;
-                for (int j = 0; j < 10; ++j) {
-                    count = libusb_get_string_descriptor_ascii(device, desc, buffer, std::size(buffer));
-                    if (count >= 0) {
-                        break;
-                    }
-                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                }
+                const auto count = libusb_get_string_descriptor_ascii(device, desc, buffer, std::size(buffer));
                 if (count < 0) {
                     dprint("Skipping interface {}, failed to get string ({})", interfaceNumber, count);
                     continue;
@@ -408,7 +382,7 @@ struct LibUSBDevice {
 
         dprint("Opened libusb device {:#06x}/{:#06x} interface {:#04x}: epIn: {:#04x}, epOut: {:#04x}", vendorID, productID, interfaceNumber,epIn, epOut);
 
-        return LibUSBDevice { ctx, device.detach(), interface, epIn, epOut };
+        return LibUSBDevice { ctx, device, interface, epIn, epOut };
     }
 
     ~LibUSBDevice() {

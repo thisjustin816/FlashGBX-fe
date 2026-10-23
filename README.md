@@ -306,7 +306,11 @@ Many different reproduction cartridges share their flash chip command set, so ev
 
 ## Downloads
 
-In the GitHub [Releases](https://github.com/Lesserkuma/FlashGBX/releases) section, downloadable packages are available for Windows, Linux and macOS.
+Windows packages for this fork are available in [Releases](https://github.com/thisjustin816/FlashGBX-fe/releases). Its update check uses the same repository.
+
+Version `5.1+jb.6` uses fredemmott's `.3` Chromatic runtime and firmware, with this fork's cartridge profiles, detection fixes, and `flash-info` command. The `.4` runtime failed cartridge analysis on the tested Windows/Chromatic setup. Keep the rollback in place until a replacement runtime passes that check. Before merging a later upstream release, undo the runtime rollback so its prerequisites are restored.
+
+For upstream Windows, Linux, and macOS packages, see [Lesserkuma's releases](https://github.com/Lesserkuma/FlashGBX/releases).
 
 ### **Windows**
 - x64 (.zip archive): Extract to a folder of your choice and run FlashGBX without having to install anything.

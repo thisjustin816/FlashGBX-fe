@@ -1093,8 +1093,8 @@ class FlashGBX_GUI(QtWidgets.QMainWindow):
 
 		if update_check and update_check.lower() == "enabled":
 			print("")
-			url = "https://api.github.com/repos/fredemmott/FlashGBX/releases/latest"
-			site = "https://github.com/fredemmott/FlashGBX/releases/latest"
+			url = "https://api.github.com/repos/thisjustin816/FlashGBX-fe/releases/latest"
+			site = "https://github.com/thisjustin816/FlashGBX-fe/releases/latest"
 			try:
 				ret = requests.get(url, allow_redirects=True, timeout=1.5)
 			except requests.exceptions.ConnectTimeout as e:
