@@ -10,6 +10,8 @@ name: Build Windows installer
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -84,6 +86,7 @@ jobs:
   # Publishes a release the first time a version is built, and tags the commit
   # that was built. A later build of the same version leaves the release alone.
   release:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     permissions:

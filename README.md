@@ -308,7 +308,7 @@ Many different reproduction cartridges share their flash chip command set, so ev
 
 Windows packages for this fork are available in [Releases](https://github.com/thisjustin816/FlashGBX-fe/releases). Its update check uses the same repository.
 
-The published `5.1+jb.6` release uses fredemmott's `.3` Chromatic runtime and firmware. This test branch restores the `.4` runtime from upstream commit `8cc2d98` and retains this fork's cartridge profiles, detection fixes, and update settings. Its version is `5.1+jb.6.fred4test`.
+Version `5.1+jb.7` restores fredemmott's `.4` Chromatic runtime and firmware from upstream commit `8cc2d98`, retaining this fork's cartridge profiles, detection fixes, and update settings. Cartridge analysis passed on the tested Windows/Chromatic setup with a ModRetro S29JL032J top-boot cartridge. The earlier `.3` runtime remains available in release `5.1+jb.6`.
 
 For upstream Windows, Linux, and macOS packages, see [Lesserkuma's releases](https://github.com/Lesserkuma/FlashGBX/releases).
 
