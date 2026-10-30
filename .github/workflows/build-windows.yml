@@ -74,6 +74,14 @@ jobs:
             exit 1
           }
 
+      - name: Check packaged Python and Chromatic backend
+        shell: pwsh
+        run: |
+          & ./cache/embedded-python/python.exe -X utf8 -m unittest discover -s tests -v
+          if ($LASTEXITCODE -ne 0) { throw 'Host tests failed' }
+          & ./cache/embedded-python/python.exe -X utf8 -c "from FlashGBX.hw_Chromatic import GbxDevice; device = GbxDevice(); assert device.GetSupportedModes() == ['DMG']"
+          if ($LASTEXITCODE -ne 0) { throw 'Chromatic backend import failed' }
+
       - uses: actions/upload-artifact@v4
         with:
           name: FlashGBX-${{ steps.version.outputs.value }}-Windows
