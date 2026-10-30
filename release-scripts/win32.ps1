@@ -76,7 +76,7 @@ import site
 "@ | Set-Content -Path $pth.FullName -Encoding ASCII
 }
 
-& "$($py.FullName)" -m pip install Pillow==12.1.0 PySide6==6.10.2 pyserial==3.5 python-dateutil==2.9.0.post0 requests==2.32.5 packaging==26.0 --no-cache-dir
+& "$($py.FullName)" -m pip install Pillow==12.1.0 PySide6==6.10.2 pyserial==3.5 reedsolo==1.7.0 python-dateutil==2.9.0.post0 requests==2.32.5 packaging==26.0 --no-cache-dir
 # LK_Chromatic native components
 & "$($py.FullName)" -m pip install scikit-build-core==1.0.3 cmake==4.3.4 ninja==1.11.1.4 --no-cache-dir
 & "$($py.FullName)" -m pip install . --no-build-isolation --no-deps
