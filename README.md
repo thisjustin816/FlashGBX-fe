@@ -2,6 +2,13 @@
 
 for Windows, Linux, macOS (→ [Download](#downloads))
 
+> [!IMPORTANT]
+> This fork is archived. For ModRetro Chromatic support, use [fredemmott's releases](https://github.com/fredemmott/FlashGBX/releases).
+>
+> Everything this fork added is now in Lesserkuma's FlashGBX 5.2 or in fredemmott's fork: the ChisFlash MBC5 MAX and S29JL032J profiles, matching on extra flash ID cycles, the `flash-info` command, ModRetro names on the Chromatic, and the Windows installer drivers.
+>
+> A `jb` build checks this repository for updates, so it will not offer fredemmott's releases. Install one by hand to replace it.
+
 <img src="https://raw.githubusercontent.com/Lesserkuma/FlashGBX/master/.github/01.png" alt="FlashGBX on Windows 11" width="500"><br><img src="https://raw.githubusercontent.com/Lesserkuma/FlashGBX/master/.github/02.png" alt="GB Camera Album Viewer" width="500">
 
 ## Introduction
@@ -311,9 +318,9 @@ Many different reproduction cartridges share their flash chip command set, so ev
 
 ## Downloads
 
-Windows packages for this fork are available in [Releases](https://github.com/thisjustin816/FlashGBX-fe/releases). Its update check uses the same repository.
+This fork is archived, and [fredemmott's releases](https://github.com/fredemmott/FlashGBX/releases) replace it. Its own [Releases](https://github.com/thisjustin816/FlashGBX-fe/releases) stay available but get no updates.
 
-Version `5.2+jb.1` integrates FlashGBX 5.2 and the revised cartridge profiles. It retains the `.4` Chromatic runtime and L15 firmware. Physical flash-ID, CFI, and profile-selection checks passed on a ModRetro S29JL032J top-boot cartridge and both ChisFlash boards using the preceding `5.2+jb.1.dev0` candidate. Write/erase behavior, physical rumble, and RTC persistence remain untested. Features that require L16, including the new Camera live viewer and e-Reader scanner, require a supported L16 device.
+Version `5.2+jb.1`, the last release here, integrates FlashGBX 5.2 and the revised cartridge profiles. It retains the `.4` Chromatic runtime and L15 firmware. Physical flash-ID, CFI, and profile-selection checks passed on a ModRetro S29JL032J top-boot cartridge and both ChisFlash boards using the preceding `5.2+jb.1.dev0` candidate. Write/erase behavior, physical rumble, and RTC persistence remain untested. Features that require L16, including the new Camera live viewer and e-Reader scanner, require a supported L16 device.
 
 Version `5.1+jb.7` restores fredemmott's `.4` Chromatic runtime and firmware from upstream commit `8cc2d98`, retaining this fork's cartridge profiles, detection fixes, and update settings. Cartridge analysis passed on the tested Windows/Chromatic setup with a ModRetro S29JL032J top-boot cartridge. The earlier `.3` runtime remains available in release `5.1+jb.6`.
 
